@@ -1,0 +1,69 @@
+---
+
+- name: "basebox playbook"
+  vars:
+    package_install: [
+      { "package": "curl" },
+      { "package": "vim" },
+    ]
+    package_remove: [
+    ]
+  hosts: localhost
+  gather_facts: yes
+  tasks:
+    - name: "checks and debug"
+      block:
+        - name: "OS check"
+          assert:
+            that:
+              - ansible_os_family == "Debian"
+          tags:
+            - basebox
+            - software
+            
+        - name: "Display hostname"
+          debug:
+            msg: "inventory_hostname {{ inventory_hostname }}"
+          tags:
+            - basebox
+            - software
+            
+    - name: "Software packages"
+      become: true
+      block:
+        - name: Run the equivalent of "apt-get update" as a separate step
+          ansible.builtin.apt:
+            update_cache: yes
+          tags:
+            - basebox
+            - software
+
+        - name: "Install packages"
+          ansible.builtin.package:
+            name: "{{ item.package }}"
+            state: present
+          retries: 3
+          with_items: "{{ package_install }}"
+          tags:
+            - basebox
+            - software
+
+        - name: "Remove packages"
+          ansible.builtin.apt:
+            name: "{{ item.package }}"
+            state: absent
+          retries: 3
+          with_items: "{{ package_remove }}"
+          tags:
+            - basebox
+            - software
+
+        - name: "upgrade apt packages"
+          ansible.builtin.apt:
+            name: "*"
+            state: latest
+            update_cache: yes
+          retries: 3
+          tags:
+            - basebox
+            - software
