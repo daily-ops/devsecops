@@ -11,37 +11,19 @@ runcmd:
   - [eval, 'snap restart subiquity.subiquity-server']
   - [eval, 'snap restart subiquity.subiquity-service']
 
-# users:
-#   - default
-#   - name: ansible
-#     passwd: "$6$L9BM55KgUSWg4$DLm6ftrIx37a7MM2wkZAKHNw9lfgqrUJP.qzlCEroP75gSMxu3EbbVnAzm50BfUI85Go3Urv.NNiVuu4GbSvo0"
-#     shell: /bin/bash
-#     lock_passwd: false
-#     ssh_pwauth: True
-#     chpasswd: { expire: False }
-#     sudo: ALL=(ALL) NOPASSWD:ALL
-#     groups: users, admin
-#     ssh_authorized_keys:
-#       ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQDjPfBVZlK1SEcroIknIYlrXCoI3nXzEt1SYOkDMJc91smIRHKv2g6wKm/oJJoSeXlxa92kNs8R60qiKgtxUS768gKWFwaMxmiOx+2xh4moJMatfQbfECd6NQ5Kugb4OKFQYOdrKd6bDFnXMjfEKfMF7nrV6RS/rRYInQWGwHAnQ+6o6JEOsKKnQFvmOf4fnrgxhN5vT7OoQGHvLfRHYM6wp2UAK/N4EwRW2vZSiQKCgQRMoWEpCNOjK7+QvmgDVS17DUN4ea+zMK4koLDt8uOhKoy/9SHOWr/Dcds+yvrYAUQGBrZpNCvImU9914XZ4nx2VOzjEaBT2C1LOKX2Lm6H6ZQK3adnRq9XY3acmamwO2P2ySCius1ftLlDZl9FE3uWv1LH3xOzIYCC73qmeeTab2fDAqG7gRvvSfRQEHmN+cNoTD9jxwIr4gMs6LSsOtS3+kib34N8s3IR0H+FFDQ3/kwkeFAbTurMdwvfXoekn3ex6UcMbEoCdaE1KsGh7ns= ansible
-
 autoinstall:
   version: 1
   # on the Ubuntu Server ISO, install with the minimal source
   source:
     id: ubuntu-server-minimal
   
-  # early-commands:
-  #   - systemctl stop ssh
-  #   - sed -i "s/#Cache=.*/Cache=yes/g" /etc/systemd/resolved.conf
-  #   - sed -i "s/#DNS=.*/DNS=192.168.0.1/g" /etc/systemd/resolved.conf
-  #   - sed -i "s/#FallbackDNS=.*/FallbackDNS=8.8.8.8/g" /etc/systemd/resolved.conf
-  #   - systemctl restart systemd-resolved
   locale: en_US.UTF-8
   network:
       network:
           version: 2
           ethernets:
-              eth1:
+            # enp0s17 is the default interface name of the built-in NIC comes with the initial installation
+              enp0s17:
                  dhcp4: yes
                  dhcp6: no
   apt:

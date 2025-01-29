@@ -31,6 +31,8 @@ export PACKER_LOG_PATH=$(pwd)/packer_$(date +%H%M%d%m).log
 
 packer build -var "iso-url=${ISO_URL}" \
     -var "iso-checksum=${ISO_CHECKSUM}" \
+    -var "guest-additions-url=${GUEST_ISO_URL}" \
+    -var "guest-additions-checksum=${GUEST_ISO_CHECKSUM}" \
     -var "basebox-version=${BASEBOX_VERSION}" \
     -var "artifact-dir=${ARTIFACT_DIR}" \
     -var "ca-file=${CA_FILE}" \
