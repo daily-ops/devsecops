@@ -58,29 +58,6 @@ source "virtualbox-ovf" "dns_dev" {
 build {
   sources = ["sources.virtualbox-ovf.dns_dev"]
 
-  # provisioner "shell" {
-  #   inline = [
-  #     "sudo mkdir -p /etc/dns_dev/ssl",
-  #     "sudo chmod -R 777 /etc/dns_dev"
-  #   ]
-  # }
-
-  # provisioner "file" {
-  #   source = "${var.dns_dev-cert-file}"
-  #   destination = "/etc/dns_dev/ssl/${basename(var.dns_dev-cert-file)}"
-  # }
-
-  # provisioner "file" {
-  #   source = "${var.dns_dev-key-file}"
-  #   destination = "/etc/dns_dev/ssl/${basename(var.dns_dev-key-file)}"
-  # }
-
-  # provisioner "shell" {
-  #   inline = [
-  #     "sudo chmod -R 755 /etc/dns_dev"
-  #   ]
-  # }
-
   provisioner "ansible-local" {
     playbook_file   = "playbook-dns_dev.yml"
     extra_arguments = [
