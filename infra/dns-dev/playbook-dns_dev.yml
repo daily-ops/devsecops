@@ -1,0 +1,168 @@
+---
+
+- name: "DNS development environment installation playbook"
+  vars:
+    # A dummy domain name
+    dns_domain_name: "dummydomain.com"
+    hostname: "dns-dev"
+    # List of packages to install
+    package_install: [
+      { "package": "bind9" },
+      { "package": "bind9utils" },
+      { "package": "bind9-doc" },
+      { "package": "dnsutils" }
+    ]
+  hosts: dns_dev
+  gather_facts: yes
+  tasks:
+  - name: "checks and debug"
+    block:
+      - name: "OS check"
+        assert:
+          that:
+          - ansible_os_family == "Debian"
+        tags:
+          - dns_dev
+
+      - name: "Display hostname"
+        debug:
+          msg: "inventory_hostname {{ inventory_hostname }}"
+        tags:
+        - dns_dev
+
+  - name: "Environment preparation"
+    become: true
+    block:
+    - name: "Hostname" 
+      shell: |
+        hostnamectl set-hostname {{ hostname }}
+      tags:
+        - dns_dev
+
+
+  - name: "Network setup"
+    become: true
+    block:
+      - name: "Network setup"
+        shell: |
+          cat >/etc/netplan/60-devnet.yaml <<-EOF
+          network:
+            version: 2
+            ethernets:
+              eth0:
+                addresses:
+                - 192.168.10.2/24
+                nameservers:
+                  addresses:
+                  - 192.168.10.2
+                dhcp6: no
+              eth1:
+                addresses:
+                - 192.168.0.180/24
+                nameservers:
+                  addresses:
+                  - 192.168.0.1
+                dhcp6: no
+          EOF
+        tags:
+        - dns_dev
+        - dns_dev-netplan
+
+  - name: "Software packages"
+    become: true
+    block:
+    - name: Run the equivalent of "apt-get update" as a separate step
+      ansible.builtin.apt:
+        update-cache: yes
+      tags:
+      - dns_dev
+
+    - name: "Install packages"
+      ansible.builtin.apt:
+        name: "{{ item.package }}"
+        state: present
+      retries: 3
+      with_items: "{{ package_install }}"
+      tags:
+      - dns_dev
+
+    - name: "Post-installation DNS configuration - options"
+      shell: |
+        #!/bin/bash
+
+        cat >/etc/bind/named.conf.options <<-EOF
+        options {
+                directory "/var/cache/bind";
+                recursion no;
+                allow-transfer { none; };
+
+                dnssec-validation auto;
+
+                auth-nxdomain no;    # conform to RFC1035
+                listen-on-v6 { any; };
+        };
+        EOF
+      tags:
+      - dns_dev
+
+    - name: "Post-installation DNS configuration - local"
+      shell: |
+        #!/bin/bash
+
+        cat >>/etc/bind/named.conf.local <<-EOF
+
+        zone "{{ dns_domain_name }}" {
+          type master;
+          file "/etc/bind/zones/db.{{ dns_domain_name }}";
+        };
+        EOF
+      tags:
+      - dns_dev
+
+    - name: "Post-installation DNS configuration - zones"
+      shell: |
+        #!/bin/bash
+        
+        mkdir /etc/bind/zones
+
+        echo "Processing forward zone file"
+        cp -f /etc/bind/db.local "/etc/bind/zones/db.{{ dns_domain_name }}"
+        
+        sed -i 's/root.localhost/admin.{{ dns_domain_name }}/g' /etc/bind/zones/db.{{ dns_domain_name }}
+        sed -i 's/localhost/{{ dns_domain_name }}/g' /etc/bind/zones/db.{{ dns_domain_name }}
+        sed -i 's/(* 2/ 3/g' /etc/bind/zones/db.{{ dns_domain_name }}
+
+        grep -v -E '@(.*)IN(.*)NS(.*){{ dns_domain_name }}' /etc/bind/zones/db.{{ dns_domain_name }} | grep -v -E '@(.*)IN(.*)A(.*)127.0.0.1' | grep -v -E '@(.*)IN(.*)A(.*)::1' > /etc/bind/zones/db.{{ dns_domain_name }}.tmp
+        cp -f /etc/bind/zones/db.{{ dns_domain_name }}.tmp /etc/bind/zones/db.{{ dns_domain_name }}
+        echo "; Name servers" >> /etc/bind/zones/db.{{ dns_domain_name }}
+        echo "{{ dns_domain_name }}.    IN      NS      ns1.{{ dns_domain_name }}." >> /etc/bind/zones/db.{{ dns_domain_name }}
+        echo "; A records for name servers" >> /etc/bind/zones/db.{{ dns_domain_name }}
+        echo "ns1                IN      A       192.168.10.2" >> /etc/bind/zones/db.{{ dns_domain_name }}
+        echo "gitlab             IN      A       192.168.10.10" >> /etc/bind/zones/db.{{ dns_domain_name }}
+        echo "jenkins            IN      A       192.168.10.11" >> /etc/bind/zones/db.{{ dns_domain_name }}
+
+        echo "Processing reverse zone file"
+        cp -f /etc/bind/db.127 /etc/bind/zones/db.192.168.10
+        sed -i 's/root.localhost/admin.{{ dns_domain_name }}/g' /etc/bind/zones/db.192.168.10
+        sed -i 's/localhost/{{ dns_domain_name }}/g' /etc/bind/zones/db.192.168.10
+        sed -i 's/(* 1/ 2/g' /etc/bind/zones/db.192.168.10
+        grep -v -E '@(.*)IN(.*)NS(.*){{ dns_domain_name }}' /etc/bind/zones/db.192.168.10 | grep -v -E '1.0.0(.*)IN(.*)PTR(.*){{ dns_domain_name }}' > /etc/bind/zones/db.192.168.10.tmp
+        cp -f /etc/bind/zones/db.192.168.10.tmp /etc/bind/zones/db.192.168.10
+        echo "        IN      NS      ns1.{{ dns_domain_name }}." >> /etc/bind/zones/db.192.168.10
+        echo "; PTR records" >> /etc/bind/zones/db.192.168.10
+        echo "1       IN      PTR     ns1.{{ dns_domain_name }}." >> /etc/bind/zones/db.192.168.10
+        echo "2       IN      PTR     dev.dns.{{ dns_domain_name }}." >> /etc/bind/zones/db.192.168.10
+        echo "3       IN      PTR     gitlab.{{ dns_domain_name }}." >> /etc/bind/zones/db.192.168.10
+        echo "4       IN      PTR     jenkins.{{ dns_domain_name }}." >> /etc/bind/zones/db.192.168.10
+      tags:
+      - dns_dev
+
+    - name: "Post-installation DNS configuration - check and restart"
+      shell: |
+        named-checkconf
+        named-checkzone {{ dns_domain_name }} /etc/bind/zones/db.{{ dns_domain_name }}
+        named-checkzone 10.168.192.in-addr.arpa /etc/bind/zones/db.192.168.10
+        systemctl restart bind9
+      tags:
+      - dns_dev
+
