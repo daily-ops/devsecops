@@ -18,6 +18,8 @@ fi
 
 source ./build.env
 
+export VAGRANT_HOME=/var/data/vagrant
+
 rm -rf ${ARTIFACT_DIR}/dns_dev/${DNS_DEV_IMAGE_VERSION}
 
 export PACKER_LOG=1

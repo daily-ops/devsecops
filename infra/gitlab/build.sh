@@ -23,6 +23,7 @@ source ./build.env
 
 rm -rf ${ARTIFACT_DIR}/gitlab/${GITLAB_IMAGE_VERSION}
 
+export VAGRANT_HOME=/var/data/vagrant
 export PACKER_LOG=1
 export PACKER_LOG_PATH=$(pwd)/packer_$(date +%H%M%d%m).log
 
