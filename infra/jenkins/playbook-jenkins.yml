@@ -1,0 +1,101 @@
+---
+
+- name: "Jenkins installation playbook"
+  vars:
+    dns_domain_name: "dummydomain.com"
+    domain_name: "jenkins.{{ dns_domain_name }}"
+    hostname: "jenkins"
+    jenkins_version: "latest"
+    package_install: [
+      { "package": "fontconfig" },
+      { "package": "openjdk-17-jdk" },
+      { "package": "jenkins={{ jenkins_version }}" }
+    ]
+  hosts: jenkins
+  gather_facts: yes
+  tasks:
+  - name: "checks and debug"
+    block:
+      - name: "OS check"
+        assert:
+          that:
+          - ansible_os_family == "Debian"
+        tags:
+          - jenkins
+
+      - name: "Display hostname"
+        debug:
+          msg: "inventory_hostname {{ inventory_hostname }}"
+        tags:
+        - jenkins
+
+  - name: "Environment preparation"
+    become: true
+    block:
+    - name: "Domain name" 
+      shell: |
+        hostnamectl set-hostname {{ hostname }}
+      tags:
+        - jenkins
+
+  - name: "Software packages"
+    become: true
+    block:
+    - name: "Add jenkins repository"
+      shell: |
+        wget -O /usr/share/keyrings/jenkins-keyring.asc \
+          https://pkg.jenkins.io/debian-stable/jenkins.io-2023.key
+        echo "deb [signed-by=/usr/share/keyrings/jenkins-keyring.asc]" \
+          https://pkg.jenkins.io/debian-stable binary/ | sudo tee \
+          /etc/apt/sources.list.d/jenkins.list > /dev/null
+      tags:
+      - jenkins
+
+    - name: Run the equivalent of "apt-get update" as a separate step
+      ansible.builtin.apt:
+        update-cache: yes
+      tags:
+      - jenkins
+
+    - name: "Install packages"
+      ansible.builtin.apt:
+        name: "{{ item.package }}"
+        state: present
+      retries: 3
+      with_items: "{{ package_install }}"
+      tags:
+      - jenkins
+
+    - name: "Post-installation jenkins configuration"
+      shell: |
+        echo "ToDo: Post-installation tasks"
+      tags:
+      - jenkins
+
+  - name: "Network setup"
+    become: true
+    block:
+      - name: "Network setup"
+        shell: |
+          cat >/etc/netplan/60-devnet.yaml <<-EOF
+          network:
+            version: 2
+            ethernets:
+              eth0:
+                addresses:
+                - 192.168.10.11/24
+                nameservers:
+                  addresses:
+                  - 192.168.10.2
+                dhcp6: no
+              eth1:
+                addresses:
+                - 192.168.0.161/24
+                nameservers:
+                  addresses:
+                  - 192.168.0.1
+                dhcp6: no
+          EOF
+        tags:
+        - jenkins
+        - jenkins-netplan
