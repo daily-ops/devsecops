@@ -31,6 +31,15 @@
           tags:
             - kubemaster
 
+        - name: "Environment preparation"
+          become: true
+          block:
+          - name: "Domain name" 
+            shell: |
+              hostnamectl set-hostname {{ hostname }}
+            tags:
+              - kubemaster
+
     - name: Manage kubeadm repository
       block:
         - name: kubeadm repository keyring
@@ -49,7 +58,6 @@
 
         - name: kubeadm repository
           ansible.builtin.apt_repository:
-            # repo: "deb [arch={{arch}} signed-by=/usr/share/keyrings/kubeadm-archive-keyring.gpg]  https://pkgs.k8s.io/core:/stable:/v1.31/deb/ /"
             repo: "deb [signed-by=/usr/share/keyrings/kubeadm-archive-keyring.gpg]  https://pkgs.k8s.io/core:/stable:/v1.31/deb/ /"
             state: present
             filename: kubeadm
@@ -90,3 +98,32 @@
           command: systemctl restart containerd
           tags:
             - kubemaster
+
+
+    - name: "Network setup"
+      become: true
+      block:
+        - name: "Network setup"
+          shell: |
+            cat >/etc/netplan/60-devnet.yaml <<-EOF
+            network:
+              version: 2
+              ethernets:
+                eth0:
+                  addresses:
+                  - 192.168.10.12/24
+                  nameservers:
+                    addresses:
+                    - 192.168.10.2
+                  dhcp6: no
+                eth1:
+                  addresses:
+                  - 192.168.0.162/24
+                  nameservers:
+                    addresses:
+                    - 192.168.0.1
+                  dhcp6: no
+            EOF
+          tags:
+          - kubemaster
+          - kubemaster-netplan
