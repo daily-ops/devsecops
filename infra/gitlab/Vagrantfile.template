@@ -1,0 +1,10 @@
+# -*- mode: ruby -*-
+# vi:set ft=ruby sw=2 ts=2 sts=2:
+
+Vagrant.configure("2") do |config|
+  config.vm.provider "virtualbox" do |vb|
+    vb.memory = "8192"
+    vb.customize ["modifyvm", :id, "--nic2", "intnet", "--intnet2", "devnet", "--cableconnected2", "on"]
+    vb.customize ["modifyvm", :id, "--nic3", "bridged", "--bridgeadapter3", "eno1", "--cableconnected3", "on"]
+  end
+end

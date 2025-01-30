@@ -1,0 +1,117 @@
+---
+
+- name: "Gitlab EE installation playbook"
+  vars:
+    dns_domain_name: "dummydomain.com"
+    domain_name: "gitlab.{{ dns_domain_name }}"
+    email_domain: "mail.{{ dns_domain_name}}"
+    hostname: "gitlab"
+    gitlab_version: "17.8.1-ee.0"
+    package_install: [
+      { "package": "curl" },
+      { "package": "postfix"},
+      { "package": "gitlab-ee={{ gitlab_version }}" }
+    ]
+  hosts: gitlab
+  gather_facts: yes
+  tasks:
+  - name: "checks and debug"
+    block:
+      - name: "OS check"
+        assert:
+          that:
+          - ansible_os_family == "Debian"
+        tags:
+          - gitlab-ee
+
+      - name: "Display hostname"
+        debug:
+          msg: "inventory_hostname {{ inventory_hostname }}"
+        tags:
+        - gitlab-ee
+
+  - name: "Environment preparation"
+    become: true
+    block:
+    - name: "Domain name" 
+      shell: |
+        hostnamectl set-hostname {{ hostname }}
+        grep -q EXTERNAL_URL /etc/environment || echo "EXTERNAL_URL=https://{{ domain_name }}" >> /etc/environment
+      tags:
+        - gitlab-ee
+
+  - name: "Software packages"
+    become: true
+    block:
+    - name: "Add gitlab repository"
+      shell: |
+        curl https://packages.gitlab.com/install/repositories/gitlab/gitlab-ee/script.deb.sh | sudo bash
+      tags:
+      - gitlab-ee
+
+    - name: Run the equivalent of "apt-get update" as a separate step
+      ansible.builtin.apt:
+        update-cache: yes
+      tags:
+      - gitlab-ee
+
+    - name: Postfix mailname
+      ansible.builtin.debconf:
+        name: postfix mailname
+        question: postfix postfix/mailname
+        value: "{{ email_domain }}"
+        vtype: string
+      tags:
+      - gitlab-ee
+
+    - name: Postfix mailer type
+      ansible.builtin.debconf:
+        name: postfix mailname
+        question: postfix postfix/main_mailer_type
+        value: "Internet Site"
+        vtype: select
+
+    - name: "Install packages"
+      ansible.builtin.apt:
+        name: "{{ item.package }}"
+        state: present
+      retries: 3
+      with_items: "{{ package_install }}"
+      tags:
+      - gitlab-ee
+
+    - name: "Post-installation gitlab configuration"
+      shell: |
+        sed -i "s/^letsencrypt\['enable'\] = true/letsencrypt\['enable'\] = false/g" /etc/gitlab/gitlab.rb
+        sed -i "s/^# nginx\['redirect_http_to_https'\] = false/nginx\['redirect_http_to_https'\] = true/g" /etc/gitlab/gitlab.rb
+        gitlab-ctl reconfigure
+      tags:
+      - gitlab-ee
+
+  - name: "Network setup"
+    become: true
+    block:
+      - name: "Network setup"
+        shell: |
+          cat >/etc/netplan/60-devnet.yaml <<-EOF
+          network:
+            version: 2
+            ethernets:
+              eth0:
+                addresses:
+                - 192.168.10.10/24
+                nameservers:
+                  addresses:
+                  - 192.168.10.2
+                dhcp6: no
+              eth1:
+                addresses:
+                - 192.168.0.160/24
+                nameservers:
+                  addresses:
+                  - 192.168.0.1
+                dhcp6: no
+          EOF
+        tags:
+        - gitlab-ee
+        - gitlab-ee-netplan

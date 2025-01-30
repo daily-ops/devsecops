@@ -1,0 +1,28 @@
+ARTIFACT_DIR = ENV.fetch('ARTIFACT_DIR', './')
+GITLAB_IMAGE_VERSION = ENV.fetch('GITLAB_IMAGE_VERSION', 'undefined')
+MEMORY_SIZE = ENV.fetch('MEMORY_SIZE', 8192).to_i
+CPUS = ENV.fetch('CPUS', 4).to_i
+
+Vagrant.configure("2") do |config|
+  # The most common configuration options are documented and commented below.
+  # For a complete reference, please see the online documentation at
+  # https://docs.vagrantup.com.
+
+  # Every Vagrant development environment requires a box. You can search for
+  # boxes at https://vagrantcloud.com/search.
+  # config.vm.box = "base"
+
+  config.vm.box = "#{ARTIFACT_DIR}/gitlab/#{GITLAB_IMAGE_VERSION}/gitlab-ee-#{GITLAB_IMAGE_VERSION}.box"
+  config.vm.boot_timeout = 900
+  config.ssh.username = "ansible"
+  config.ssh.private_key_path = "~/.ssh/id_rsa"
+
+  config.vm.define "gitlab" do |node|
+    # Name shown in the GUI
+    node.vm.provider "virtualbox" do |vb|
+      vb.name = "gitlab"
+      vb.memory = "#{MEMORY_SIZE}"
+      vb.cpus = "#{CPUS}"
+    end
+  end
+end
