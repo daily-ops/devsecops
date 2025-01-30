@@ -3,13 +3,13 @@
   hosts: kubemaster
   vars:
     hostname: "kube-master"
-    kubemaster_version: "1.31.1-0"
-    containerd_version: "1.5.7-0"
+    kubemaster_version: "1.31.5-1.1"
+    containerd_version: "1.7.12-0ubuntu4"
     package_install:
       [
-        # { "package": "kubeadm={{ kubemaster_version }}" },
-        # { "package": "kubelet={{ kubemaster_version }}" },
-        # { "package": "kubectl={{ kubemaster_version }}" },
+        { "package": "kubeadm={{ kubemaster_version }}" },
+        { "package": "kubelet={{ kubemaster_version }}" },
+        { "package": "kubectl={{ kubemaster_version }}" },
         { "package": "containerd={{ containerd_version }}" },
       ]
 
