@@ -61,6 +61,7 @@ autoinstall:
       error: "&1"
   final_message: "System installation complete."
   user-data:
+    timezone: "Australia/Melbourne"
     disable_root: true
     package_update: true
     package_upgrade: false
