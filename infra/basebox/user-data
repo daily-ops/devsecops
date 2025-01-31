@@ -26,6 +26,7 @@ autoinstall:
               enp0s17:
                  dhcp4: yes
                  dhcp6: no
+
   apt:
     geoip: false
     primary:
@@ -61,6 +62,7 @@ autoinstall:
       error: "&1"
   final_message: "System installation complete."
   user-data:
+    timezone: Australia/Melbourne
     disable_root: true
     package_update: true
     package_upgrade: false
