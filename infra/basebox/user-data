@@ -26,8 +26,6 @@ autoinstall:
               enp0s17:
                  dhcp4: yes
                  dhcp6: no
-                 dhcp4-overrides:
-                    use-routes: false                 
   apt:
     geoip: false
     primary:
