@@ -61,7 +61,7 @@ source "virtualbox-iso" "basebox" {
   ssh_username = "ansible"
   ssh_password = "ansible"
   ssh_port = 22
-  ssh_timeout = "20m"
+  ssh_timeout = "60m"
   nested_virt = true
 
   vrdp_port_min = 5100

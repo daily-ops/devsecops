@@ -47,7 +47,7 @@ source "virtualbox-ovf" "dns_dev" {
   ssh_username = "ansible"
   ssh_password = "ansible"
   ssh_port = 22
-  ssh_timeout = "20m"
+  ssh_timeout = "60m"
   vrdp_port_min = 5051
   vrdp_port_max = 5060
   shutdown_command     = "echo \"ansible\" | sudo -S shutdown now"
