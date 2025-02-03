@@ -6,14 +6,14 @@ print_usage() {
     echo "BASEBOX_VERSION - version of the basebox to be used, e.g. 1.0.0"
     echo "IMAGE_SOURCE_PATH - path to the base image to be used, e.g. /storage/basebox/1.0.0/basebox-1.0.0.box"
     echo "ARTIFACT_DIR - base directory of the artifacts, e.g. /storage"
-    echo "JENKINS_VERSION - version of jenkins to be installed, i.e. 17.8.1-ee.0
+    echo "JENKINS_VERSION - version of jenkins to be installed, i.e. 2.42.0
     echo "JENKINS_CERT_FILE - path to tls certificate file, the file name is required to match the DNS name, i.e. /storage/tls/jenkins.dummydomain.com.crt
     echo "JENKINS_KEY_FILE - path to tls private key of the certificate, the file name is required to match the DNS name, i.e. /storage/tls/jenkins.dummydomain.com.key
     echo "JENKINS_IMAGE_VERSION - target build version of jenkins virtual machine image, i.e. 0.0.1
     echo "DOMAIN_NAME - base domain name to be used, e.g. dummydomain.com"
     echo 
     echo "NOTE:"
-    echo "TLS is not implemented yet however the variables are still required.
+    echo "TLS is not implemented yet however the variables are still required."
     echo "It can be configured manually post provisioning."
     echo "The certificate and key files are uploaded to /etc/jenkins/ssl/ directory."
     echo "###################################################################"
