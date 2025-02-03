@@ -88,6 +88,7 @@
       tags:
       - gitlab-ee
 
+
   - name: "Network setup"
     become: true
     block:
@@ -110,8 +111,23 @@
                 nameservers:
                   addresses:
                   - 192.168.0.1
+                routes:
+                  - to: default
+                    via: 192.168.0.1
                 dhcp6: no
           EOF
+
+          cat > /etc/netplan/70-override-cloud-init.yaml<<-EOF
+          network:
+            ethernets:
+                enp0s17:
+                    dhcp4: true
+                    dhcp6: false
+                    dhcp4-overrides:
+                      use-routes: false
+            version: 2
+          EOF
+
         tags:
         - gitlab-ee
         - gitlab-ee-netplan
