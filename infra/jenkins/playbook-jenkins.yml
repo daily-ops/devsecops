@@ -32,11 +32,11 @@
   - name: "Environment preparation"
     become: true
     block:
-    - name: "Domain name" 
-      shell: |
-        hostnamectl set-hostname {{ hostname }}
-      tags:
-        - jenkins
+      - name: "Domain name" 
+        shell: |
+          hostnamectl set-hostname {{ hostname }}
+        tags:
+          - jenkins
 
   - name: "Software packages"
     become: true
@@ -72,12 +72,13 @@
       tags:
       - jenkins
 
+
   - name: "Network setup"
     become: true
     block:
       - name: "Network setup"
         shell: |
-          cat >/etc/netplan/60-devnet.yaml <<-EOF
+          cat >/etc/netplan/60-devnet.yaml<<-EOF
           network:
             version: 2
             ethernets:
@@ -94,8 +95,24 @@
                 nameservers:
                   addresses:
                   - 192.168.0.1
+                routes:
+                  - to: default
+                    via: 192.168.0.1
                 dhcp6: no
           EOF
+
+          cat > /etc/netplan/70-override-cloud-init.yaml<<-EOF
+          network:
+            ethernets:
+                enp0s17:
+                    dhcp4: true
+                    dhcp6: false
+                    dhcp4-overrides:
+                      use-routes: false
+            version: 2
+          EOF
+
         tags:
         - jenkins
         - jenkins-netplan
+      
