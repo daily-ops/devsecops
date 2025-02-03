@@ -1,0 +1,159 @@
+---
+
+- name: "Jenkins agent playbook"
+  vars:
+    jdk_version: 17
+    hostname: jenkins-agent
+    package_install: [
+      { "package": "openjdk-{{ jdk_version }}-jdk" },
+      { "package": "maven"},
+      { "package": "npm"},
+      { "package": "docker-ce" },
+      { "package": "docker-ce-cli" },
+      { "package": "containerd.io" },
+      { "package": "docker-buildx-plugin" },
+      { "package": "docker-compose-plugin" }
+    ]
+    package_remove: [
+    ]
+  hosts: jenkins-agent
+  gather_facts: yes
+  tasks:
+    - name: "checks and debug"
+      block:
+        - name: "OS check"
+          assert:
+            that:
+              - ansible_os_family == "Debian"
+          tags:
+            - jenkins-agent
+            - software
+            
+        - name: "Display hostname"
+          debug:
+            msg: "inventory_hostname {{ inventory_hostname }}"
+          tags:
+            - jenkins-agent
+            - software
+        
+    - name: "Environment preparation"
+      become: true
+      block:
+      - name: "Set hostname" 
+        shell: |
+          hostnamectl set-hostname {{ hostname }}
+        tags:
+            - jenkins-agent
+
+    - name: "Users"
+      become: true
+      block:
+        - name: "Jenkins user"
+          shell: |
+            groupadd docker
+            useradd -m -d /home/jenkins -G docker -s /bin/bash jenkins
+            mkdir /home/jenkins/.ssh
+            echo "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC5TdoNgxD+AxgMzTLMjRH63oldyMCrn+D0dY4YHY+5yBQWfKckCUJdXpy7fxiimkE3XITFYbJ6pC993AuYNZWZaDIB/xawWH9lXtOcjfP31ZfCSchIXRLeE4QpFSBDRoigFHsmduYK2PjbDlFgD9WjM0umGqaQX5elhuhqqjAL0heHxP9dDUsgZ95aAyRSzO760niX8aBn5SlMQ7sZ5E5QOc1E7DXKaLfXTlkzgUh4+pmyBUoCGu+ciyuMUPMJ1t6prA3N9brPgx/VWxTp/ueXs45ZYDwOCmd4MF7q9eOIvFWVhOoZWWj+urRmZ6MQafRl1V7Jdo42ZPNQoN0W4bjD jenkins" >> /home/jenkins/.ssh/authorized_keys
+            chown -R jenkins:jenkins /home/jenkins
+            
+
+    - name: "Software packages"
+      become: true
+      block:
+        - name: "Add docker repository"
+          shell: |
+            wget -O /usr/share/keyrings/docker-keyring.asc \
+              https://download.docker.com/linux/ubuntu/gpg
+            echo "deb [signed-by=/usr/share/keyrings/docker-keyring.asc]" \
+              https://download.docker.com/linux/ubuntu \
+              $(. /etc/os-release && echo "$VERSION_CODENAME") stable | sudo tee \
+              /etc/apt/sources.list.d/docker.list > /dev/null
+          tags:
+            - jenkins-agent
+            - software
+
+        - name: Run the equivalent of "apt-get update" as a separate step
+          ansible.builtin.apt:
+            
+            update_cache: yes
+          tags:
+            - jenkins-agent
+            - software
+
+        - name: "Install packages"
+          ansible.builtin.package:
+            name: "{{ item.package }}"
+            state: present
+          retries: 3
+          with_items: "{{ package_install }}"
+          tags:
+            - jenkins-agent
+            - software
+
+        - name: "Install maven wrapper"
+          shell: |
+            mvn -N wrapper:wrapper
+            mv mvnw /usr/local/bin
+
+        - name: "Remove packages"
+          ansible.builtin.apt:
+            name: "{{ item.package }}"
+            state: absent
+          retries: 3
+          with_items: "{{ package_remove }}"
+          tags:
+            - jenkins-agent
+            - software
+
+        - name: "upgrade apt packages"
+          ansible.builtin.apt:
+            name: "*"
+            state: latest
+            update_cache: yes
+          retries: 3
+          tags:
+            - jenkins-agent
+            - software
+
+    - name: "Network setup"
+      become: true
+      block:
+        - name: "Network setup"
+          shell: |
+            cat >/etc/netplan/60-devnet.yaml <<-EOF
+            network:
+              version: 2
+              ethernets:
+                eth0:
+                  addresses:
+                  - 192.168.10.20/24
+                  nameservers:
+                    addresses:
+                    - 192.168.10.2
+                  dhcp6: no
+                eth1:
+                  addresses:
+                  - 192.168.0.171/24
+                  nameservers:
+                    addresses:
+                    - 192.168.0.1
+                  routes:
+                  - to: default
+                    via: 192.168.0.1
+                  dhcp6: no
+            EOF
+
+            cat > /etc/netplan/70-override-cloud-init.yaml<<-EOF
+            network:
+              ethernets:
+                  enp0s17:
+                      dhcp4: true
+                      dhcp6: false
+                      dhcp4-overrides:
+                        use-routes: false
+              version: 2
+            EOF
+
+          tags:
+          - jenkins-agent
+          - jenkins-agent-netplan
