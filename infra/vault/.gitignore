@@ -1,0 +1,8 @@
+.vagrant
+*.box
+*.log
+artifacts
+*.env
+*.crt
+*.pem
+*.code-workspace
