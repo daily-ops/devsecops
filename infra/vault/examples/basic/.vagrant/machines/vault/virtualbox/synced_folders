@@ -1,0 +1,1 @@
+{"virtualbox":{"/vagrant":{"guestpath":"/vagrant","hostpath":"/home/ansible/devsecops/infra/vault/examples/basic","disabled":false,"__vagrantfile":true}}}

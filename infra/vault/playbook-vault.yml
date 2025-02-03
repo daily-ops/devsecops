@@ -1,0 +1,159 @@
+---
+
+- name: "Vault installation playbook"
+  vars:
+    dns_domain_name: "dummydomain.com"
+    domain_name: "vault.{{ dns_domain_name }}"
+    hostname: "vault"
+    vault_version: "latest"
+    package_install: [
+      { "package": "vault={{ vault_version }}" }
+    ]
+  hosts: vault
+  gather_facts: yes
+  tasks:
+  - name: "checks and debug"
+    block:
+      - name: "OS check"
+        assert:
+          that:
+          - ansible_os_family == "Debian"
+        tags:
+          - vault
+
+      - name: "Display hostname"
+        debug:
+          msg: "inventory_hostname {{ inventory_hostname }}"
+        tags:
+        - vault
+
+  - name: "Environment preparation"
+    become: true
+    block:
+
+      - name: Add the group 'vault'
+        ansible.builtin.group:
+          name: vault
+        tags:
+          - vault
+
+      - name: Add the user 'vault'
+        ansible.builtin.user:
+          name: vault
+          group: vault
+        tags:
+          - vault
+
+      - name: "Domain name" 
+        shell: |
+          hostnamectl set-hostname {{ hostname }}
+          mkdir -p /var/data/vault
+          chown -R vault:vault /var/data/vault
+        tags:
+          - vault
+
+  - name: "Software packages"
+    become: true
+    block:
+    - name: "Add vault repository"
+      shell: |
+        curl -fsSL https://apt.releases.hashicorp.com/gpg | apt-key add -
+        apt-add-repository "deb [arch=amd64] https://apt.releases.hashicorp.com $(lsb_release -cs) main"
+      tags:
+      - vault
+
+    - name: Run the equivalent of "apt-get update" as a separate step
+      ansible.builtin.apt:
+        update-cache: yes
+      tags:
+      - vault
+
+    - name: "Install packages"
+      ansible.builtin.apt:
+        name: "{{ item.package }}"
+        state: present
+      retries: 3
+      with_items: "{{ package_install }}"
+      tags:
+      - vault
+
+    - name: "Setup vault"
+      shell: |
+        cat << EOF > /etc/vault.d/vault.hcl
+        ui = true
+        disable_mlock = true
+
+        storage "raft" {
+          path    = "/var/data/vault"
+          node_id = "primary"
+        }
+
+        cluster_addr = "https://vault.microlabs.info:8201"
+        api_addr = "https://vault.microlabs.info:8200"
+
+        listener "tcp" {
+          address            = "0.0.0.0:8200"
+          tls_disable        = false
+          tls_cert_file      = "/etc/vault/ssl/vault.microlabs.info.crt"
+          tls_key_file       = "/etc/vault/ssl/vault.microlabs.info.key"
+        }
+
+        EOF
+
+        # vault.hcl should be readable by the vault group only
+        chown root:root /etc/vault.d
+        chown root:vault /etc/vault.d/vault.hcl
+        chmod 640 /etc/vault.d/vault.hcl
+
+        systemctl enable vault
+        systemctl start vault
+
+        echo "Setup Vault profile"
+        cat <<PROFILE | tee /etc/profile.d/vault.sh
+        export VAULT_ADDR="https://vault.microlabs.info:8200"
+        PROFILE
+
+  - name: "Network setup"
+    become: true
+    block:
+      - name: "Network setup"
+        shell: |
+          cat >/etc/netplan/60-devnet.yaml<<-EOF
+          network:
+            version: 2
+            ethernets:
+              eth0:
+                addresses:
+                - 192.168.10.12/24
+                nameservers:
+                  addresses:
+                  - 192.168.10.2
+                dhcp6: no
+              eth1:
+                addresses:
+                - 192.168.0.162/24
+                nameservers:
+                  addresses:
+                  - 192.168.0.1
+                routes:
+                  - to: default
+                    via: 192.168.0.1
+                dhcp6: no
+          EOF
+
+          cat > /etc/netplan/70-override-cloud-init.yaml<<-EOF
+          network:
+            ethernets:
+                enp0s17:
+                    dhcp4: true
+                    dhcp6: false
+                    dhcp4-overrides:
+                      use-routes: false
+            version: 2
+          EOF
+
+          netplan apply
+        tags:
+        - vault
+        - vault-netplan
+      
