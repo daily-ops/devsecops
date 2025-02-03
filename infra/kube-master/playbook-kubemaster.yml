@@ -111,14 +111,14 @@
               ethernets:
                 eth0:
                   addresses:
-                  - 192.168.10.12/24
+                  - 192.168.10.30/24
                   nameservers:
                     addresses:
                     - 192.168.10.2
                   dhcp6: no
                 eth1:
                   addresses:
-                  - 192.168.0.162/24
+                  - 192.168.0.190/24
                   nameservers:
                     addresses:
                     - 192.168.0.1

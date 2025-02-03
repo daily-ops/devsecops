@@ -111,6 +111,7 @@
         echo "ns1                IN      A       192.168.10.2" >> /etc/bind/zones/db.{{ dns_domain_name }}
         echo "gitlab             IN      A       192.168.10.10" >> /etc/bind/zones/db.{{ dns_domain_name }}
         echo "jenkins            IN      A       192.168.10.11" >> /etc/bind/zones/db.{{ dns_domain_name }}
+        echo "vault              IN      A       192.168.10.12" >> /etc/bind/zones/db.{{ dns_domain_name }}
 
         echo "Processing reverse zone file"
         cp -f /etc/bind/db.127 /etc/bind/zones/db.192.168.10
@@ -125,6 +126,7 @@
         echo "2       IN      PTR     dev.dns.{{ dns_domain_name }}." >> /etc/bind/zones/db.192.168.10
         echo "3       IN      PTR     gitlab.{{ dns_domain_name }}." >> /etc/bind/zones/db.192.168.10
         echo "4       IN      PTR     jenkins.{{ dns_domain_name }}." >> /etc/bind/zones/db.192.168.10
+        echo "5       IN      PTR     vault.{{ dns_domain_name }}." >> /etc/bind/zones/db.192.168.10
       tags:
       - dns_dev
 
