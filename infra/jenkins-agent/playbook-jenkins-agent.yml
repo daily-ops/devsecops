@@ -12,7 +12,8 @@
       { "package": "docker-ce-cli" },
       { "package": "containerd.io" },
       { "package": "docker-buildx-plugin" },
-      { "package": "docker-compose-plugin" }
+      { "package": "docker-compose-plugin" },
+      { "package": "jq" }
     ]
     package_remove: [
     ]
