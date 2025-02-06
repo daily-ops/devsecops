@@ -13,7 +13,8 @@
       { "package": "containerd.io" },
       { "package": "docker-buildx-plugin" },
       { "package": "docker-compose-plugin" },
-      { "package": "jq" }
+      { "package": "jq" },
+      { "package": "vault=1.11.12-1"}
     ]
     package_remove: [
     ]
@@ -73,9 +74,16 @@
             - jenkins-agent
             - software
 
+        - name: "Add vault repository"
+          shell: |
+            curl -fsSL https://apt.releases.hashicorp.com/gpg | apt-key add -
+            apt-add-repository "deb [arch=amd64] https://apt.releases.hashicorp.com $(lsb_release -cs) main"
+          tags:
+            - jenkins-agent
+            - software
+
         - name: Run the equivalent of "apt-get update" as a separate step
           ansible.builtin.apt:
-            
             update_cache: yes
           tags:
             - jenkins-agent
@@ -91,10 +99,26 @@
             - jenkins-agent
             - software
 
-        - name: "Install maven wrapper"
+        - name: "Install Go"
           shell: |
-            mvn -N wrapper:wrapper
-            mv mvnw /usr/local/bin
+            wget https://go.dev/dl/go1.23.6.linux-amd64.tar.gz
+            rm -rf /usr/local/go && tar -C /usr/local -xzf go1.23.6.linux-amd64.tar.gz
+            sed -i -e "/PATH=\"/ s/\"$/:\/usr\/local\/go\/bin\"/g" /etc/environment
+          tags:
+            - jenkins-agent
+            - software
+
+        - name: "Install enumer"
+          shell: |
+            source /etc/environment
+            cd /var/tmp
+            git clone https://github.com/dmarkham/enumer.git
+            cd enumer && git checkout v1.5.10 && make build-cli
+            cp cli/build/enumer.linux-amd64 /usr/local/bin/enumer
+            cd .. && rm -rf enumer
+          tags:
+            - jenkins-agent
+            - software
 
         - name: "Remove packages"
           ansible.builtin.apt:
