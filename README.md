@@ -6,8 +6,10 @@ Installation Instructions:
 
 Each individual virtual machine support different fuction. The `build.sh` can be used to build box file for Vagrant to be imported where the `examples` directory contains sample scripts.
 
+
+|Box name|Purpose|
 |-|-|
-|basebox|Base |
+|basebox|Base box|
 |dns-dev|DNS server|
 |gitlab|Gitlab server|
 |jenkins-agent|Jenkins agent node|
