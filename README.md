@@ -8,6 +8,8 @@ Provision an off-line infrastructure platform consisting of Gitlab, Jenkins, Vau
 - VirtualBox
 - SSH-Key for `ansible` user
 - Anything required by each box as input parameters.
+- Terraform
+
 
 #### Installation Guides: 
 
